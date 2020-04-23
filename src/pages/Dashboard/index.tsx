@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
 
+import { Link } from 'react-router-dom';
 import income from '../../assets/income.svg';
 import outcome from '../../assets/outcome.svg';
 import total from '../../assets/total.svg';
@@ -24,18 +26,42 @@ interface Transaction {
 }
 
 interface Balance {
-  income: string;
-  outcome: string;
-  total: string;
+  income: number;
+  outcome: number;
+  total: number;
 }
 
+interface GetResponse {
+  transactions: Transaction[];
+  balance: Balance;
+}
+/**
+ *  "id": "5876f936-4c81-4463-9d2c-9b3100051e42",
+      "title": "Patinete elétrico",
+      "type": "income",
+      "value": "1000.00",
+      "category_id": "9989b08d-adfb-485e-9a24-b5245932f1d6",
+      "created_at": "2020-04-20T21:12:05.819Z",
+      "updated_at": "2020-04-20T21:12:05.819Z",
+      "category": {
+        "id": "9989b08d-adfb-485e-9a24-b5245932f1d6",
+        "title": "Radical",
+        "created_at": "2020-04-20T21:12:05.804Z",
+        "updated_at": "2020-04-20T21:12:05.804Z"
+      }
+    }
+ */
+
 const Dashboard: React.FC = () => {
-  // const [transactions, setTransactions] = useState<Transaction[]>([]);
-  // const [balance, setBalance] = useState<Balance>({} as Balance);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState<Balance>({} as Balance);
 
   useEffect(() => {
     async function loadTransactions(): Promise<void> {
-      // TODO
+      const response = await api.get<GetResponse>('transactions');
+
+      setTransactions(response.data.transactions);
+      setBalance(response.data.balance);
     }
 
     loadTransactions();
@@ -51,21 +77,23 @@ const Dashboard: React.FC = () => {
               <p>Entradas</p>
               <img src={income} alt="Income" />
             </header>
-            <h1 data-testid="balance-income">R$ 5.000,00</h1>
+            <h1 data-testid="balance-income">{formatValue(balance.income)}</h1>
           </Card>
           <Card>
             <header>
               <p>Saídas</p>
               <img src={outcome} alt="Outcome" />
             </header>
-            <h1 data-testid="balance-outcome">R$ 1.000,00</h1>
+            <h1 data-testid="balance-outcome">
+              {formatValue(balance.outcome)}
+            </h1>
           </Card>
           <Card total>
             <header>
               <p>Total</p>
               <img src={total} alt="Total" />
             </header>
-            <h1 data-testid="balance-total">R$ 4000,00</h1>
+            <h1 data-testid="balance-total">{formatValue(balance.total)}</h1>
           </Card>
         </CardContainer>
 
@@ -79,20 +107,28 @@ const Dashboard: React.FC = () => {
                 <th>Data</th>
               </tr>
             </thead>
-
             <tbody>
-              <tr>
-                <td className="title">Computer</td>
-                <td className="income">R$ 5.000,00</td>
-                <td>Sell</td>
-                <td>20/04/2020</td>
-              </tr>
-              <tr>
-                <td className="title">Website Hosting</td>
-                <td className="outcome">- R$ 1.000,00</td>
-                <td>Hosting</td>
-                <td>19/04/2020</td>
-              </tr>
+              {transactions.map(transaction => (
+                <tr key={transaction.id}>
+                  <td className="title">{transaction.title}</td>
+                  <td
+                    className={
+                      transaction.type === 'income' ? 'income' : 'outcome'
+                    }
+                  >
+                    {transaction.type === 'income'
+                      ? formatValue(transaction.value)
+                      : `- ${formatValue(transaction.value)}`}
+                  </td>
+                  <td>{transaction.category.title}</td>
+                  <td>
+                    {format(
+                      parseISO(transaction.created_at.toString()),
+                      "dd'/'MM'/'yyyy",
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </TableContainer>
